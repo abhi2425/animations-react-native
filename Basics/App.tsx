@@ -1,52 +1,83 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react'
+import { StyleSheet, View } from 'react-native'
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
-} from 'react-native-gesture-handler';
+} from 'react-native-gesture-handler'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withRepeat,
   useAnimatedGestureHandler,
-} from 'react-native-reanimated';
+} from 'react-native-reanimated'
 
-const SIZE = 100.0;
+type ContextType = {
+  translateX: number
+  translateY: number
+}
+
+const SIZE = 100.0
 
 const handleRotation = (progress: Animated.SharedValue<number>) => {
-  'worklet';
+  'worklet'
 
-  return `${progress.value * 2 * Math.PI}rad`;
-};
+  return `${progress.value * 2 * Math.PI}rad`
+}
 
 export default function App() {
-  const progress = useSharedValue(1);
-  const scale = useSharedValue(2);
+  const progress = useSharedValue(1)
+  const scale = useSharedValue(2)
+  const color = useSharedValue('hotpink')
+  const translateX = useSharedValue(0)
+  const translateY = useSharedValue(0)
+
+  useEffect(() => {
+    progress.value = withRepeat(withSpring(0.5), -1, true)
+    scale.value = withRepeat(withSpring(1), -1, true)
+  }, [])
+
+  const panGestureEvent = useAnimatedGestureHandler<
+    PanGestureHandlerGestureEvent,
+    ContextType
+  >({
+    onStart: (event, context) => {
+      context.translateX = translateX.value
+      context.translateY = translateY.value
+    },
+    onActive: (event, context) => {
+      translateX.value = event.translationX + context.translateX
+      translateY.value = event.translationY + context.translateY
+    },
+    onEnd: (event) => {},
+  })
 
   const reanimatedStyle = useAnimatedStyle(() => {
     return {
       opacity: progress.value,
       borderRadius: (progress.value * SIZE) / 2,
-      transform: [{ scale: scale.value }, { rotate: handleRotation(progress) }],
-    };
-  }, []);
-
-  useEffect(() => {
-    progress.value = withRepeat(withSpring(0.5), -1, true);
-    scale.value = withRepeat(withSpring(1), -1, true);
-  }, []);
+      transform: [
+        { scale: scale.value },
+        { skewX: '40deg' },
+        { rotate: handleRotation(progress) },
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+    }
+  }, [])
 
   return (
     <View style={styles.container}>
-      <Animated.View
-        style={[
-          { height: SIZE, width: SIZE, backgroundColor: 'blue' },
-          reanimatedStyle,
-        ]}
-      />
+      <PanGestureHandler onGestureEvent={panGestureEvent}>
+        <Animated.View
+          style={[
+            { height: SIZE, width: SIZE, backgroundColor: color.value },
+            reanimatedStyle,
+          ]}
+        />
+      </PanGestureHandler>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -56,4 +87,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+})
